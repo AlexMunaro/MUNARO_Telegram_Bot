@@ -59,7 +59,7 @@ public class WordleBotVS implements LongPollingSingleThreadUpdateConsumer {
                 "it",
                 "@Devopagareilmutuo");
         */
-        //System.out.println(db.getAllTags());
+        //System.out.println(db.getPlayerByTag("7777").tag);
         //System.out.println(db.getPlayerByTelegramUsername("Devopagareilmutuo").username);
     }
 
@@ -392,13 +392,12 @@ public class WordleBotVS implements LongPollingSingleThreadUpdateConsumer {
 
 
     private void giveup(Long chatId) throws TelegramApiException {
-        if (wg == null || (!wg.playing)) {
-            send(chatId, "You're not in a Wordle game!");
-            return;
-        }
-        sendGif(chatId, "crying", "The word was: " + wg.word);
-        if (wg != null)
+        if (wg != null && (wg.playing)) {
+            sendGif(chatId, "crying", "The word was: " + wg.word);
             wg.playing = false;
+        }else{
+            send(chatId, "You're not in a Wordle game!");
+        }
     }
 
     // ===================== SEND / EDIT =====================
