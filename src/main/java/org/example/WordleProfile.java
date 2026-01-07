@@ -3,19 +3,22 @@ package org.example;
 import org.telegram.telegrambots.meta.api.objects.User;
 
 class WordleProfile {
-    String username;
-    String tag;
+    public String username;
+    public String tag;
     public String favlang;
-    String flag;
-    int games;
-    int wins;
+    public String flag;
+    public int matches;
+    public int wins;
+    public String telegram_username;
 
-    public WordleProfile(String username, String tag, String favlang, int games, int wins) {
+
+    public WordleProfile(String tag,String username, String favlang, String telegram_username, int matches, int wins) throws Exception {
         this.username = username;
         this.tag = tag;
         this.favlang = favlang;
-        this.games = games;
+        this.matches = matches;
         this.wins = wins;
+        this.telegram_username = telegram_username;
         switch (favlang) {
             case "en":
                 flag = "\uD83C\uDDEC\uD83C\uDDE7";
@@ -32,13 +35,13 @@ class WordleProfile {
                 case "fr":
                 flag = "\uD83C\uDDEB\uD83C\uDDF7";
                 break;
-
         }
     }
 
     double winRate() {
-        return games == 0 ? 0 : (wins * 100.0 / games);
+        return matches == 0 ? 0 : (wins * 100.0 / matches);
     }
+
     public String getProfile(User tgUser) {
         return String.format(
                 "👤 *PROFILE*\n\n" +
@@ -55,9 +58,10 @@ class WordleProfile {
                 tag,
                 flag,
                 favlang,
-                games,
+                matches,
                 wins,
                 winRate()
         );
     }
+
 }

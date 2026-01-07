@@ -14,7 +14,7 @@ public class Main {
 
             botsApplication.registerBot(botToken, new WordleBotVS());
 
-        } catch (TelegramApiException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
 

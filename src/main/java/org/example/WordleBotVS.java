@@ -4,13 +4,15 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.telegram.telegrambots.client.okhttp.OkHttpTelegramClient;
 import org.telegram.telegrambots.longpolling.util.LongPollingSingleThreadUpdateConsumer;
-import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.objects.InputFile;
-import org.telegram.telegrambots.meta.api.objects.Update;
-import org.telegram.telegrambots.meta.api.objects.User;
+import org.telegram.telegrambots.meta.api.methods.GetUserProfilePhotos;
+import org.telegram.telegrambots.meta.api.methods.send.*;
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
+import org.telegram.telegrambots.meta.api.objects.*;
+import org.telegram.telegrambots.meta.api.objects.message.Message;
 import org.telegram.telegrambots.meta.api.objects.photo.PhotoSize;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardRow;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
 
@@ -23,399 +25,457 @@ import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.sql.SQLException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Properties;
 import java.util.Random;
 
-import org.telegram.telegrambots.meta.api.methods.GetUserProfilePhotos;
-import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
-import org.telegram.telegrambots.meta.api.objects.UserProfilePhotos;
-
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardRow;
-
-import org.telegram.telegrambots.meta.api.methods.send.SendAnimation;
-import org.telegram.telegrambots.meta.api.objects.InputFile;
-
-import org.telegram.telegrambots.meta.api.methods.send.SendAnimation;
-import org.telegram.telegrambots.meta.api.objects.InputFile;
-
 public class WordleBotVS implements LongPollingSingleThreadUpdateConsumer {
-    private final TelegramClient telegramClient = new OkHttpTelegramClient("8430822310:AAH7dni1GTuKRaO4Qdw5prHoC4NjQMQj1pE");
+
+    private final TelegramClient telegramClient =
+            new OkHttpTelegramClient(Config.get("TELEGRAM_BOT_TOKEN"));
+
+    private static final String GIPHY_API_KEY =
+            Config.get("GIPHY_API_KEY");
+
+    private final Random random = new Random();
+
+    private int statusMessageId;
+
+    WordleProfile pf = null;
+    WordleGame wg = null;
     database db;
-    Update update;
-    User tgUser;
-    String telegramUsername;
-    Long userId;
-    Long chatId;
-    static WordleProfile pf;
-    private static final String GIPHY_API_KEY = "1fVdyGPz1ETjWXqiydw2jGEMHHnbAh7Q";
-    Random random = new Random();
+    private boolean waitingForProfileInput = false;
+    private boolean waitingForSettingsInput = false;
 
-    boolean playing;
-    String word;
-    int length, tries, max_t, m_id1, m_id2;
+    int ma = 0, wi = 0;
 
-    public WordleBotVS() {
-        try {
-            db = new database();
-        } catch (SQLException e) {
-            System.err.println("Database connection error: " + e.getMessage());
-            System.exit(-1);
-        }
-        playing = false;
+    public WordleBotVS() throws Exception {
+        db = new database();
+        //pf=db.getPlayerByTelegramUsername("Devopagareilmutuo");
+        /*
+        db.createPlayer(String.valueOf(1234),
+                "Wizard",
+                "it",
+                "@Devopagareilmutuo");
+        */
+        //System.out.println(db.getAllTags());
+        //System.out.println(db.getPlayerByTelegramUsername("Devopagareilmutuo").username);
     }
 
+    // ===================== ENTRY POINT =====================
     @Override
     public void consume(Update update) {
-
-        this.update = update;
-
-        if (tgUser == null) {
-            tgUser = update.getMessage().getFrom();
-        }
-        if (telegramUsername == null) {
-            telegramUsername = tgUser.getUserName();
-        }
-        if (userId == null) {
-            userId = tgUser.getId();
-        }
-        if (chatId == null) {
-            chatId = update.getMessage().getChatId();
-        }
-        if (pf == null) {
-            pf = new WordleProfile("alex", "3130", "it", 0, 0);
-        }
-
         try {
             if (update.hasCallbackQuery()) {
-                handleMessage(update.getCallbackQuery().getData());
-                //return;
-            } else {
-                handleMessage(update.getMessage().getText());
+                handleCallback(update.getCallbackQuery());
+            } else if (update.hasMessage() && update.getMessage().hasText()) {
+                handleMessage(update.getMessage());
             }
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            e.printStackTrace();
         }
-        //if (update.hasMessage() && update.getMessage().hasText()) {
-        //}
     }
 
-    private void handleMessage(String msg) throws Exception {
-        if(!playing){
-            switch (msg) {
+    // ===================== CALLBACK =====================
+    private void handleCallback(CallbackQuery cb) throws Exception {
+        String data = cb.getData();
+        Message msg = (Message) cb.getMessage();
+        Long chatId = cb.getMessage().getChatId();
+
+        switch (data) {
+            case "EDIT_PROFILE" -> edit_profile(chatId, msg.getFrom().getUserName());
+
+            case "DELETE_PROFILE" -> delete_profile(chatId);
+
+            case "GIVE_UP" -> giveup(chatId);
+        }
+    }
+
+    private void delete_profile(Long chatId) throws Exception {
+        if (pf == null) {
+            send(chatId, "Your profile doesn't exist");
+        } else {
+            send(chatId, "Your profile got deleted successfully");
+            db.deletePlayerByTag(pf.tag);
+            pf=null;
+            ma=0;
+            wi=0;
+        }
+    }
+
+    private void edit_profile(Long chatId, String User) throws Exception {
+        //pf=db.getPlayerByTelegramUsername("Devopagareilmutuo");
+        if (pf == null) {
+            send(chatId, "Your profile doesn't exist");
+        } else {
+            db.deletePlayerByTag(pf.tag);
+            create_profile(chatId);
+            pf=db.getPlayerByTelegramUsername(User);
+        }
+    }
+
+    // ===================== MESSAGE =====================
+    private void handleMessage(Message msg) throws Exception {
+        if (waitingForProfileInput) {
+            handleProfileCreation(msg);
+            return;
+        }
+        if (waitingForSettingsInput) {
+            handlePlayVariant(msg);
+            return;
+        }
+        Long chatId = msg.getChatId();
+        Long userId = msg.getFrom().getId();
+        String text = msg.getText();
+        pf=db.getPlayerByTelegramUsername(msg.getFrom().getUserName());
+        if (wg == null || (!wg.playing)) {
+            switch (text) {
                 case "/profile":
-                    profile();
+
+                    if (pf != null) {
+                        System.out.println(pf.username);
+                        profile(msg, chatId, userId);
+                    } else {
+                        send(chatId, "You don't have a profile!");
+                    }
+                    break;
+                case "/play":
+                    if (pf != null)
+                        startGame(chatId, 6, pf.favlang, 5);
+                    else
+                        send(chatId, "You can't play without a profile!");
+                    break;
+
+                case "/play_variant":
+                    if (pf != null)
+                        play_variant(chatId, msg);
+                    else
+                        send(chatId, "You can't play without a profile!");
                     break;
                 case "/create_profile":
-                    create_profile();
-                    break;
-                case "/edit_profile":
-                    edit_profile();
-                    System.out.println("modifica");
-                    return;
-                case "/delete_profile":
-                    delete_profile();
-                    System.out.println("elimina");
-                    return;
-                case "/play":
-                    play(6, 5);
-                    break;
-                case "/play_vs":
-                    play_vs();
-                    break;
-                case "/play_variant":
-                    play_variant();
-                    break;
-                case "/play_variant_vs":
-                    play_variant_vs();
-                    break;
-                case "/giveup":
-                    giveup();
+                    create_profile(chatId);
                     break;
                 default:
-                    sendGif("dancing", "");
+                    sendGif(chatId, "dancing", "");
                     break;
             }
-        }else{
-            if(msg.startsWith("/")){
-                if(msg.equals("/giveup")){
-                    giveup();
-                }else{
-                    send("You can't do other commands while playing!");
+        } else {
+            if (text.startsWith("/")) {
+                if (text.equals("/giveup")) {
+                    giveup(chatId);
+                } else {
+                    send(chatId, "❌ You can't use commands during a match");
                 }
-            }else{
-                if(msg.length()==5){
-                    send(playing(msg));
-                }else{
-                    send("The word must be "+length+" characters long!");
+            } else {
+
+                if (text.length() != wg.length) {
+                    send(chatId, "The word must be exactly " + wg.length + " characters long");
+                } else {
+                    String s = wg.next(text);
+                    editMessage(chatId, statusMessageId,
+                            "Tries: " + wg.tries + " / " + wg.maxTries, null);
+                    switch (s) {
+                        case "1":
+                            sendGif(chatId, "victory", "You won in " + wg.tries + " tries!");
+                            db.addWinByTag(pf.tag);
+                            wi++;
+                            break;
+                        case "0":
+                            giveup(chatId);
+                            break;
+                        default:
+                            send(chatId, s);
+                            break;
+                    }
+
                 }
-
             }
-        }
 
+        }
     }
 
-    private String playing(String msg) throws TelegramApiException {
-        if(msg.equals(word)){
-            sendGif("victory","You won in "+tries+" tries!");
-            playing = false;
-            return word;
-        }
-        String word2 = word;
+    private void play_variant(Long chatId,Message msg) throws Exception {
+        waitingForSettingsInput = true;
 
-        String word3 = "";
-        for(int i=0; i<length; i++){
-            if(msg.charAt(i)==word.charAt(i)){
-                word3+="\uD83D\uDFE9";
-            }else if(word2.contains(msg.charAt(i)+"")){
-                word2.trim();
-                word3+="\uD83D\uDFE8";
-            }else{
-                word3+="⬛";
-            }
+        send(chatId, """
+                To play a variant game you must send ONE message with:
+                
+                Max_tries, Word_length
+                
+                • Max_tries must be greater than or equal to 1
+                • Word_length must be at least 4
+                
+                Example:
+                6,7
+                """);
+    }
+
+    private void handlePlayVariant(Message msg) throws Exception {
+        Long chatId = msg.getChatId();
+        String text = msg.getText().trim();
+
+        waitingForSettingsInput = false;
+        String[] parts = text.split(",");
+        if (parts.length != 2) {
+            send(chatId, "❌ Invalid format. Use:\n6,7");
+            return;
         }
-        return word3;
+
+        int mt = Integer.parseInt(parts[0].trim());
+        int l = Integer.parseInt(parts[1].trim());
+
+        // 🔎 LENGTH
+        if (l<4||l>10) {
+            send(chatId, "❌ Invalid word length");
+            return;
+        }
+
+        // 🔎 MAX TRIES
+        if (mt<0) {
+            send(chatId, "❌ The max number of tries must be at least 1");
+            return;
+        }
+
+        startGame(chatId, mt, pf.favlang, l);
+    }
+
+    private void handleProfileCreation(Message msg) throws Exception {
+        Long chatId = msg.getChatId();
+        String telegramUsername = msg.getFrom().getUserName();
+        String text = msg.getText().trim();
+
+        waitingForProfileInput = false;
+
+        String[] parts = text.split(",");
+
+        if (parts.length != 3) {
+            send(chatId, "❌ Invalid format. Use:\nWizard,1234,it");
+            return;
+        }
+
+        String usernameWordle = parts[0].trim();
+        String tag = parts[1].trim();
+        String lang = parts[2].trim().toLowerCase();
+
+        // 🔎 Username Wordle
+        if (usernameWordle.length() < 3 || usernameWordle.length() > 20) {
+            send(chatId, "❌ Invalid Wordle username length");
+            return;
+        }
+
+        // 🔎 TAG
+        if (!tag.matches("[a-zA-Z0-9]{4}")) {
+            send(chatId, "❌ Tag must be exactly 4 letters or numbers");
+            return;
+        }
+
+        // 🌍 Lingua
+        if (!List.of("en", "es", "it", "de", "fr").contains(lang)) {
+            send(chatId, "❌ Invalid language. Choose: en/es/it/de/fr");
+            return;
+        }
+
+        // 🗄️ Creazione DB
+        boolean created = db.createPlayer(
+                tag,
+                usernameWordle,
+                lang,
+                telegramUsername,
+                ma,
+                wi
+        );
+
+        if (!created) {
+            send(chatId, "❌ Tag or Telegram account already registered");
+            return;
+        }
+
+        send(chatId, "✅ Profile created successfully!");
+        pf = new WordleProfile(tag, usernameWordle, lang, telegramUsername, 0, 0);
+        System.out.println(db.getPlayerByTag(tag));
+        System.out.println(db.getPlayerByTelegramUsername(telegramUsername));
     }
 
 
-    private InlineKeyboardMarkup profileKeyboard(int i) {
-        switch (i) {
-            case 1:
-                InlineKeyboardRow row1 = new InlineKeyboardRow(
-                        InlineKeyboardButton.builder()
-                                .text("✏️ Modifica profilo")
-                                .callbackData("/edit_profile")
-                                .build()
-                );
+    private void create_profile(Long chatId) {
+        waitingForProfileInput = true;
 
-                InlineKeyboardRow row2 = new InlineKeyboardRow(
-                        InlineKeyboardButton.builder()
-                                .text("🗑 Elimina account")
-                                .callbackData("/delete_profile")
-                                .build()
-                );
-                return InlineKeyboardMarkup.builder()
-                        .keyboard(List.of(row1, row2))
-                        .build();
-            case 2:
-                InlineKeyboardRow row3 = new InlineKeyboardRow(InlineKeyboardButton.builder()
-                        .text("Give up")
-                        .callbackData("/giveup")
-                        .build());
-                return InlineKeyboardMarkup.builder()
-                        .keyboard(Collections.singleton(row3))
-                        .build();
-        }
-        return null;
+        send(chatId, """
+                To create your profile send ONE message with:
+                
+                Wordle_username,Wordle_tag,Favourite_language
+                
+                • tag must be exactly 4 letters/numbers
+                • language: en / es / it / de / fr
+                
+                Example:
+                Wizard,1234,it
+                """);
     }
 
-
-    private void profile() {
-        GetUserProfilePhotos getPhotos = GetUserProfilePhotos.builder()
-                .userId(userId)
-                .limit(1)
-                .build();
-
-        String text = pf.getProfile(tgUser);
+    // ===================== PROFILE =====================
+    private void profile(Message msg, Long chatId, Long userId) {
+        String text = pf.getProfile(msg.getFrom());
 
         try {
+            GetUserProfilePhotos getPhotos = GetUserProfilePhotos.builder()
+                    .userId(userId)
+                    .limit(1)
+                    .build();
+
             UserProfilePhotos photos = telegramClient.execute(getPhotos);
 
             if (photos.getTotalCount() > 0) {
-                PhotoSize bestPhoto = photos.getPhotos()
-                        .get(0)
-                        .getLast();
+                PhotoSize bestPhoto = photos.getPhotos().get(0).getLast();
 
-                SendPhoto msg = SendPhoto.builder()
-                        .chatId(chatId.toString())
-                        .photo(new InputFile(bestPhoto.getFileId()))
-                        .caption(text)
-                        .parseMode("Markdown")
-                        .replyMarkup(profileKeyboard(1))
-                        .build();
-
-                telegramClient.execute(msg);
-            } else {
-                SendMessage msg = SendMessage.builder()
-                        .chatId(chatId.toString())
-                        .text(text)
-                        .parseMode("Markdown")
-                        .replyMarkup(profileKeyboard(1))
-                        .build();
-
-                telegramClient.execute(msg);
-            }
-
-        } catch (TelegramApiException e) {
-            e.printStackTrace();
-        }
-
-    }
-
-
-    private int send(String text) {
-        try {
-            telegramClient.execute(
-                    SendMessage.builder()
-                            .chatId(chatId)
-                            .text(text)
-                            .build()
-            );
-        } catch (TelegramApiException e) {
-            e.printStackTrace();
-        }
-        return update.getMessage().getMessageId();
-    }
-
-    private int send(String text, int req) {
-        try {
-            telegramClient.execute(
-                    SendMessage.builder()
-                            .chatId(chatId)
-                            .text(text)
-                            .replyMarkup(profileKeyboard(req))
-                            .build()
-            );
-        } catch (TelegramApiException e) {
-            e.printStackTrace();
-        }
-        return update.getMessage().getMessageId();
-    }
-
-    private void sendGif(String query, String text) throws TelegramApiException {
-        try {
-            // Encode testo ricerca
-            String encodedQuery = URLEncoder.encode(query, "UTF-8");
-
-            String urlString =
-                    "https://api.giphy.com/v1/gifs/search" +
-                            "?api_key=" + GIPHY_API_KEY +
-                            "&q=" + encodedQuery +
-                            "&limit=1" +
-                            "&offset=" + random.nextInt(10) +
-                            "&rating=g";
-
-            URL url = new URL(urlString);
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("GET");
-
-            BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(conn.getInputStream())
-            );
-
-            StringBuilder response = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                response.append(line);
-            }
-            reader.close();
-
-            // Parse JSON
-            ObjectMapper mapper = new ObjectMapper();
-            JsonNode root = mapper.readTree(response.toString());
-
-            JsonNode data = root.get("data");
-            if (data.isEmpty()) {
-                send("❌ Nessuna GIF trovata");
+                telegramClient.execute(
+                        SendPhoto.builder()
+                                .chatId(chatId.toString())
+                                .photo(new InputFile(bestPhoto.getFileId()))
+                                .caption(text)
+                                .replyMarkup(profileKeyboard())
+                                .build()
+                );
                 return;
             }
 
-            String gifUrl = data.get(0)
-                    .get("images")
-                    .get("original")
-                    .get("url")
-                    .asText();
+        } catch (TelegramApiException e) {
+            if (!e.getMessage().contains("404")) {
+                e.printStackTrace();
+            }
+        }
 
-            // Invia GIF su Telegram
-            SendAnimation animation = SendAnimation.builder()
-                    .chatId(chatId.toString())
-                    .animation(new InputFile(gifUrl))
-                    .caption(text)
-                    .build();
+        send(chatId, text);
+    }
 
-            telegramClient.execute(animation);
 
+    private InlineKeyboardMarkup profileKeyboard() {
+        InlineKeyboardRow r1 = new InlineKeyboardRow(
+                InlineKeyboardButton.builder()
+                        .text("✏️ Edit profile")
+                        .callbackData("EDIT_PROFILE")
+                        .build()
+        );
+        InlineKeyboardRow r2 = new InlineKeyboardRow(
+                InlineKeyboardButton.builder()
+                        .text("🗑 Delete profile")
+                        .callbackData("DELETE_PROFILE")
+                        .build()
+        );
+        return InlineKeyboardMarkup.builder()
+                .keyboard(List.of(r1, r2))
+                .build();
+    }
+
+    // ===================== GAME =====================
+    private void startGame(Long chatId, int maxTries, String language, int word_length) throws Exception {
+        wg = new WordleGame(maxTries, language, word_length);
+        db.addMatchByTag(pf.tag);
+        ma++;
+        send(chatId, "🎮 Wordle started!");
+        statusMessageId = send(chatId, "Tries: 0 / " + maxTries,
+                InlineKeyboardMarkup.builder()
+                        .keyboard(Collections.singletonList(
+                                new InlineKeyboardRow(
+                                        InlineKeyboardButton.builder()
+                                                .text("Give up")
+                                                .callbackData("GIVE_UP")
+                                                .build()
+                                )
+                        ))
+                        .build()
+        );
+
+        System.out.println("DEBUG word: " + wg.word);
+    }
+
+
+    private void giveup(Long chatId) throws TelegramApiException {
+        if (wg == null || (!wg.playing)) {
+            send(chatId, "You're not in a Wordle game!");
+            return;
+        }
+        sendGif(chatId, "crying", "The word was: " + wg.word);
+        if (wg != null)
+            wg.playing = false;
+    }
+
+    // ===================== SEND / EDIT =====================
+    private int send(Long chatId, String text) {
+        try {
+            Message m = telegramClient.execute(
+                    SendMessage.builder()
+                            .chatId(chatId)
+                            .text(text)
+                            .build()
+            );
+            return m.getMessageId();
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
+        }
+        return -1;
+    }
+
+    private int send(Long chatId, String text, InlineKeyboardMarkup kb) {
+        try {
+            Message m = telegramClient.execute(
+                    SendMessage.builder()
+                            .chatId(chatId)
+                            .text(text)
+                            .replyMarkup(kb)
+                            .build()
+            );
+            return m.getMessageId();
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
+        }
+        return -1;
+    }
+
+    private void editMessage(Long chatId, int messageId, String text, InlineKeyboardMarkup kb) {
+        try {
+            telegramClient.execute(
+                    EditMessageText.builder()
+                            .chatId(chatId.toString())
+                            .messageId(messageId)
+                            .text(text)
+                            .replyMarkup(kb)
+                            .build()
+            );
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
+        }
+    }
+
+    // ===================== GIF =====================
+    private void sendGif(Long chatId, String query, String caption) {
+        try {
+            String encoded = URLEncoder.encode(query, "UTF-8");
+            String url = "https://api.giphy.com/v1/gifs/search?api_key=" +
+                    GIPHY_API_KEY + "&q=" + encoded + "&limit=1&offset=" +
+                    random.nextInt(20);
+
+            HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
+            conn.setRequestMethod("GET");
+
+            BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+            String json = br.readLine();
+
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode gifUrl = mapper.readTree(json)
+                    .get("data").get(0)
+                    .get("images").get("original").get("url");
+
+            telegramClient.execute(
+                    SendAnimation.builder()
+                            .chatId(chatId.toString())
+                            .animation(new InputFile(gifUrl.asText()))
+                            .caption(caption)
+                            .build()
+            );
         } catch (Exception e) {
             e.printStackTrace();
-            send("❌ Errore nel recupero della GIF");
         }
-    }
-
-    private void create_profile() {
-        do {
-            send(
-                    """
-                            Insert your username followed by an unique 4 characters tag
-                            special characters such as !"£$%&/()=#]@ are not allowed
-                            Examples:
-                            
-                            """);
-        } while (true);
-    }
-
-    private void edit_profile() {
-        send("modifica");
-    }
-
-    private void delete_profile() {
-        send("delete profile");
-    }
-
-    private void play(int t, int l) throws Exception {
-        //sendGif("/gif dancing","congrats");
-        //sendGif("/gif crying","nice try");
-        send("Hi Wordler, ready to get started?");
-        send("Find the secret " + l + " letters long word in " + t + " or less tries");
-        word = getRandomWord(5);
-        playing = true;
-        tries = 0;
-        max_t = t;
-        length = l;
-        m_id1 = send("Current tries: 0 out of " + max_t,2);
-        System.out.println(word);
-    }
-
-    private void play_variant() {
-
-    }
-
-    private void play_vs() {
-
-    }
-
-    private void play_variant_vs() {
-
-    }
-
-    private void giveup() throws TelegramApiException {
-        if(playing){
-            sendGif("crying","The word was "+word);
-            playing = false;
-        }else{
-            send("You aren't playing right now!");
-        }
-        
-    }
-    public static String getRandomWord(int length) throws Exception {
-        String url = "https://random-word-api.herokuapp.com/word?length=" + length + "&lang="+pf.favlang;
-
-        HttpClient client = HttpClient.newHttpClient();
-
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(url))
-                .GET()
-                .build();
-
-        HttpResponse<String> response =
-                client.send(request, HttpResponse.BodyHandlers.ofString());
-
-        String body = response.body();
-
-        return body.replace("[", "")
-                .replace("]", "")
-                .replace("\"", "");
     }
 }
