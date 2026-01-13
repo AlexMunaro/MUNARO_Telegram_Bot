@@ -131,8 +131,10 @@ public class WordleBotVS implements LongPollingSingleThreadUpdateConsumer {
         pf=db.getPlayerByTelegramUsername(msg.getFrom().getUserName());
         if (wg == null || (!wg.playing)) {
             switch (text) {
+                case "/help":
+                    help(chatId);
+                    break;
                 case "/profile":
-
                     if (pf != null) {
                         System.out.println(pf.username);
                         profile(msg, chatId, userId);
@@ -156,13 +158,22 @@ public class WordleBotVS implements LongPollingSingleThreadUpdateConsumer {
                 case "/create_profile":
                     create_profile(chatId);
                     break;
+                case "/delete_profile":
+                    delete_profile(chatId);
+                    break;
+                case "/edit_profile":
+                    edit_profile(chatId, msg.getFrom().getUserName());
+                    break;
+                    case "/leaderboard":
+                        leaderboard(chatId);
+                        break;
                 default:
                     sendGif(chatId, "dancing", "");
                     break;
             }
         } else {
             if (text.startsWith("/")) {
-                if (text.equals("/giveup")) {
+                if (text.equals("/give_up")) {
                     giveup(chatId);
                 } else {
                     send(chatId, "❌ You can't use commands during a match");
@@ -183,8 +194,10 @@ public class WordleBotVS implements LongPollingSingleThreadUpdateConsumer {
                             break;
                         case "0":
                             giveup(chatId);
+
                             break;
                         default:
+                            //editMessage(chatId, statusMessageId,"",);
                             send(chatId, s);
                             break;
                     }
@@ -193,6 +206,25 @@ public class WordleBotVS implements LongPollingSingleThreadUpdateConsumer {
             }
 
         }
+    }
+
+    private void help(Long chatId) {
+        send(chatId, "Here is the list of commands for the WordleVS bot");
+        send(chatId, """
+                /help - Get the WordleVS's command list
+                /profile - Get your WordleVS profile informations
+                /create_profile - Create your WordleVS profile
+                /edit_profile - Edit your WordleVS profile
+                /delete_profile - Delete your WordleVS profile
+                /leaderboard - Get the list of the 10 best WordleVS players\s
+                /play - Play traditional Wordle
+                /play_variant - Play Wordle with custom lengths and tries
+                /give_up - Give up your current Wordle game
+                """);
+    }
+
+    private void leaderboard(Long chatId){
+        send(chatId, db.getAll());
     }
 
     private void play_variant(Long chatId,Message msg) throws Exception {
@@ -283,7 +315,8 @@ public class WordleBotVS implements LongPollingSingleThreadUpdateConsumer {
                 lang,
                 telegramUsername,
                 ma,
-                wi
+                wi,
+                chatId
         );
 
         if (!created) {
@@ -374,7 +407,8 @@ public class WordleBotVS implements LongPollingSingleThreadUpdateConsumer {
         db.addMatchByTag(pf.tag);
         ma++;
         send(chatId, "🎮 Wordle started!");
-        statusMessageId = send(chatId, "Tries: 0 / " + maxTries,
+
+        statusMessageId = send(chatId, "\u00A0* WORDLE *\u00A0\n-------------\n" + wg.getBlank() + "\nTries: 0 / " + maxTries,
                 InlineKeyboardMarkup.builder()
                         .keyboard(Collections.singletonList(
                                 new InlineKeyboardRow(

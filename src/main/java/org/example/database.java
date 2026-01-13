@@ -12,6 +12,7 @@ public class database {
         connection = DriverManager.getConnection(url);
         System.out.println("Connected to database");
 
+        //reloadDatabase();
         createTableIfNotExists();
     }
 
@@ -33,18 +34,31 @@ public class database {
 
     private void createTableIfNotExists() throws SQLException {
         String sql = """
+        CREATE TABLE IF NOT EXISTS career (
+            mdate DATE PRIMARY KEY NOT NULL,
+            guesses TEXT NOT NULL,
+            colors TEXT NOT NULL,
+            word TEXT NOT NULL,
+            username1 TEXT NOT NULL,
+            username2 TEXT,
+            chatId TEXT NOT NULL UNIQUE,
+            FOREIGN KEY (chatId) REFERENCES player (chatId)
+        );
+    """;
+        String sql2 = """
         CREATE TABLE IF NOT EXISTS players (
-            tag TEXT NOT NULL,
+            tag TEXT PRIMARY KEY NOT NULL,
             username_wordle TEXT NOT NULL,
             favlang TEXT NOT NULL,
             matches INTEGER NOT NULL DEFAULT 0,
             wins INTEGER NOT NULL DEFAULT 0,
             telegram_username TEXT NOT NULL UNIQUE,
-            PRIMARY KEY (tag)
+            chatId TEXT NOT NULL UNIQUE
         );
     """;
-
         try (Statement stmt = connection.createStatement()) {
+            stmt.execute("PRAGMA foreign_keys = ON");
+            stmt.execute(sql2);
             stmt.execute(sql);
         }
     }
@@ -55,12 +69,13 @@ public class database {
             String favLang,
             String telegramUsername,
             int m,
-            int w
+            int w,
+            Long chatId
     ) {
         String sql = """
                 INSERT INTO players
-                (tag, username_wordle, favlang, matches, wins, telegram_username)
-                VALUES (?, ?, ?, ?, ?, ?)
+                (tag, username_wordle, favlang, matches, wins, telegram_username, chatId)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
                 """;
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -70,6 +85,7 @@ public class database {
             ps.setInt(4, m);
             ps.setInt(5, w);
             ps.setString(6, telegramUsername);
+            ps.setLong(7, chatId);
             ps.executeUpdate();
             return true;
         } catch (SQLException e) {
@@ -103,24 +119,28 @@ public class database {
     }
 
     public String getAll() {
-        String sql = "SELECT * FROM players";
-        StringBuilder result = new StringBuilder();
+        String sql = "SELECT username_wordle, wins, matches FROM players ORDER BY wins desc LIMIT 10";
+        String result = """
+                🏆 LEADERBOARD
+
+                N  USERNAME WINS  MATCHES
+                --------------------------------------------------   
+                """;
 
         try (Statement stmt = connection.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
-
+            int i=1;
             while (rs.next()) {
-                if (result.length() > 0) {
-                    result.append(", "); // separatore tra i tag
-                }
-                result.append(rs.getString("tag"));
+                result += i + "- " + rs.getString("username_wordle") + "  " + rs.getInt("wins") + "  " + rs.getInt("matches") + "\n";
+                i++;
             }
 
         } catch (SQLException e) {
             System.err.println("Error fetching tags: " + e.getMessage());
         }
 
-        return result.toString();
+        //System.out.println(result);
+        return result;
     }
 
 
@@ -182,6 +202,22 @@ public class database {
             return false;
         }
 
+    }
+
+    public boolean updateCarrer(){
+        return false;
+    }
+
+    public boolean reloadDatabase() throws SQLException {
+        String sql = """
+                    DROP TABLE players;
+                    DROP TABLE carrer;
+                    """;
+        try (Statement stmt = connection.createStatement()) {
+            stmt.execute(sql);
+            createTableIfNotExists();
+        }
+        return false;
     }
 
 }

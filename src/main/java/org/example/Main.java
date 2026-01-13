@@ -8,7 +8,7 @@ import java.sql.SQLException;
 public class Main {
     public static void main(String[] args) {
         try {
-            String botToken = "8430822310:AAH7dni1GTuKRaO4Qdw5prHoC4NjQMQj1pE";
+            String botToken = Config.get("TELEGRAM_BOT_TOKEN");
             TelegramBotsLongPollingApplication botsApplication =
                     new TelegramBotsLongPollingApplication();
 
