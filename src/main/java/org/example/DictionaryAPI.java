@@ -38,7 +38,7 @@ public class DictionaryAPI {
             JSONArray root = new JSONArray(response.toString());
             JSONObject entry = root.getJSONObject(0);
 
-            result.append("📖 *").append(word).append("*\n\n");
+            result.append("📖 ").append(word).append("\n\n");
 
             JSONArray meanings = entry.getJSONArray("meanings");
 
@@ -46,7 +46,7 @@ public class DictionaryAPI {
                 JSONObject meaning = meanings.getJSONObject(i);
                 String partOfSpeech = meaning.getString("partOfSpeech");
 
-                result.append("🔹 _").append(partOfSpeech).append("_\n");
+                result.append("🔹 ").append(partOfSpeech).append("\n");
 
                 JSONArray definitions = meaning.getJSONArray("definitions");
 

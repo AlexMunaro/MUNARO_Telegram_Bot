@@ -460,7 +460,6 @@ public class WordleBotVS implements LongPollingSingleThreadUpdateConsumer {
                     SendMessage.builder()
                             .chatId(chatId)
                             .text(text)
-                            .parseMode("Markdown")
                             .build()
             );
             return m.getMessageId();
@@ -476,7 +475,6 @@ public class WordleBotVS implements LongPollingSingleThreadUpdateConsumer {
                     SendMessage.builder()
                             .chatId(chatId)
                             .text(text)
-                            .parseMode("Markdown")
                             .replyMarkup(kb)
                             .build()
             );
@@ -494,7 +492,6 @@ public class WordleBotVS implements LongPollingSingleThreadUpdateConsumer {
                             .chatId(chatId.toString())
                             .messageId(messageId)
                             .text(text)
-                            .parseMode("Markdown")
                             .replyMarkup(kb)
                             .build()
             );
