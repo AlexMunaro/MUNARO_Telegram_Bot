@@ -24,6 +24,7 @@ public class WordleGame {
         this.word = getRandomWord(word_length);
         playing = true;
         answer = new String[maxTries];
+
         for(int i=0;i<this.maxTries;i++){
             answer[i] = "";
             for(int j=0;j<length;j++){
@@ -51,63 +52,51 @@ public class WordleGame {
         return res.body().replace("[", "").replace("]", "").replace("\"", "");
     }
 
-    public String next(String guess)
-    {
-        tries++;
-        if(guess.equals(word)){
+    public String next(String guess) {
+
+        if (guess.equals(word)) {
             return "1";
         }
 
+
         String[] result = new String[length];
-        int yellow = 0;
-        //int green = 0;
+        boolean[] used = new boolean[length];
 
-        /*
-        for(int i=0;i<length;i++){
-            if(guess.charAt(i)==word.charAt(i)){
+
+        for (int i = 0; i < length; i++) {
+            result[i] = "⬛ ";
+        }
+
+
+        for (int i = 0; i < length; i++) {
+            if (guess.charAt(i) == word.charAt(i)) {
                 result[i] = "\uD83D\uDFE9 ";
-            } else if () {
-
-            }
-
-            result[i] = "⬛ "; //nero
-        }
-
-
-        /*
-        for(int i=0; i<length; i++){
-            if(guess.charAt(i)==word.charAt(i)){
-                word3[i]="\uD83D\uDFE9 "; //verde
-                word_temp = word_temp.replace(guess.charAt(i)+"", "");
-            }
-        }
-
-        for(int i=0;i<length;i++){
-            if(word3[i]==null){
-                word3[i]= "\uD83D\uDFE8 "; //giallo
+                used[i] = true;
             }
         }
 
 
-        for(int i=0; i<length; i++){
-            if(word2.contains(guess.charAt(i)+"")){
-                word2 = word2.replace(guess.charAt(i)+"", "");
-                System.out.println(word2);
-                word3+="\uD83D\uDFE8";
-            }else{
-                word3+="⬛";
+        for (int i = 0; i < length; i++) {
+            if (result[i].equals("\uD83D\uDFE8 ")) continue;
+
+            for (int j = 0; j < length; j++) {
+                if (!used[j] &&
+                        guess.charAt(i) == word.charAt(j) &&
+                        guess.charAt(i) != word.charAt(i)) {
+
+                    result[i] = "\uD83D\uDFE8 ";
+                    used[j] = true;
+                    break;
+                }
             }
         }
-        word3+="\n";
-        */
 
-        if(tries==maxTries){
+        answer[tries] = AllString(result, length);
+        tries++;
+        if (tries > maxTries) {
             playing = false;
-            return "0";
-        }else{
-            //answer[tries-1] = word3;
-            return AllString();
         }
+        return AllString();
     }
 
     String AllString(){
@@ -117,4 +106,13 @@ public class WordleGame {
         }
         return msg;
     }
+    String AllString(String[] arr, int l){
+        String msg="";
+        for(int i=0;i<l;i++){
+            msg+=arr[i];
+        }
+        msg +="\n";
+        return msg;
+    }
+
 }
