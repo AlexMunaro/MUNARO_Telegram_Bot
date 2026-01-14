@@ -191,7 +191,7 @@ public class WordleBotVS implements LongPollingSingleThreadUpdateConsumer {
                 return;
             }
 
-            String s = wg.next(text);
+            String s = wg.next(text.toLowerCase());
 
             editMessage(chatId, statusMessageId,
                     "Tries: " + wg.tries + " / " + wg.maxTries, null);
@@ -272,13 +272,11 @@ public class WordleBotVS implements LongPollingSingleThreadUpdateConsumer {
         int mt = Integer.parseInt(parts[0].trim());
         int l = Integer.parseInt(parts[1].trim());
 
-        // 🔎 LENGTH
         if (l < 4 || l > 10) {
             send(chatId, "❌ Invalid word length");
             return;
         }
 
-        // 🔎 MAX TRIES
         if (mt < 0) {
             send(chatId, "❌ The max number of tries must be at least 1");
             return;
@@ -356,6 +354,9 @@ public class WordleBotVS implements LongPollingSingleThreadUpdateConsumer {
                 
                 • tag must be exactly 4 letters/numbers
                 • language: en / es / it / de / fr
+                
+                ⚠️ You MUST have a telegram username to create your profile! 
+                   Otherwise every profile creation attempt will fail!
                 
                 Example:
                 Wizard,1234,it
