@@ -26,10 +26,7 @@ import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.util.Collections;
-import java.util.List;
-import java.util.Properties;
-import java.util.Random;
+import java.util.*;
 
 public class WordleBotVS implements LongPollingSingleThreadUpdateConsumer {
 
@@ -48,11 +45,12 @@ public class WordleBotVS implements LongPollingSingleThreadUpdateConsumer {
     database db;
     private boolean waitingForProfileInput = false;
     private boolean waitingForSettingsInput = false;
-
+    DictionaryAPI Dictionary;
     int ma = 0, wi = 0;
 
     public WordleBotVS() throws Exception {
         db = new database();
+        Dictionary = new DictionaryAPI();
         //pf=db.getPlayerByTelegramUsername("Devopagareilmutuo");
         /*
         db.createPlayer(String.valueOf(1234),
@@ -90,7 +88,13 @@ public class WordleBotVS implements LongPollingSingleThreadUpdateConsumer {
             case "DELETE_PROFILE" -> delete_profile(chatId);
 
             case "GIVE_UP" -> giveup(chatId);
+
+            case "DEFINITION" -> definition(chatId);
         }
+    }
+
+    private void definition(Long chatId) {
+        send(chatId, DictionaryAPI.getDefinition(wg.word));
     }
 
     private void delete_profile(Long chatId) throws Exception {
@@ -193,11 +197,13 @@ public class WordleBotVS implements LongPollingSingleThreadUpdateConsumer {
                     "Tries: " + wg.tries + " / " + wg.maxTries, null);
 
             if (s.equals("1")) {
-                sendGif(chatId, "victory", "You won in " + wg.tries + " tries!");
+                if (Objects.equals(pf.favlang, "en"))
+                    DefinitionGif(chatId, "victory", "You won in " + wg.tries + " tries!");
+                else
+                    sendGif(chatId, "victory", "You won in " + wg.tries + " tries!");
                 db.addWinByTag(pf.tag);
                 wi++;
             } else {
-                //send(chatId, s);
                 editMessage(chatId, statusMessageId, wg.getBlank() + "\nTries: 0 / " + wg.maxTries, InlineKeyboardMarkup.builder()
                         .keyboard(Collections.singletonList(
                                 new InlineKeyboardRow(
@@ -299,25 +305,25 @@ public class WordleBotVS implements LongPollingSingleThreadUpdateConsumer {
         String tag = parts[1].trim();
         String lang = parts[2].trim().toLowerCase();
 
-        // 🔎 Username Wordle
+
         if (usernameWordle.length() < 3 || usernameWordle.length() > 20) {
             send(chatId, "❌ Invalid Wordle username length");
             return;
         }
 
-        // 🔎 TAG
+
         if (!tag.matches("[a-zA-Z0-9]{4}")) {
             send(chatId, "❌ Tag must be exactly 4 letters or numbers");
             return;
         }
 
-        // 🌍 Lingua
+
         if (!List.of("en", "es", "it", "de", "fr").contains(lang)) {
             send(chatId, "❌ Invalid language. Choose: en/es/it/de/fr");
             return;
         }
 
-        // 🗄️ Creazione DB
+
         boolean created = db.createPlayer(
                 tag,
                 usernameWordle,
@@ -436,7 +442,11 @@ public class WordleBotVS implements LongPollingSingleThreadUpdateConsumer {
 
     private void giveup(Long chatId) throws TelegramApiException {
         if (wg != null && (wg.playing)) {
-            sendGif(chatId, "crying", "The word was: " + wg.word);
+            if (Objects.equals(pf.favlang, "en"))
+                DefinitionGif(chatId, "crying", "The word was: " + wg.word);
+            else
+                sendGif(chatId, "crying", "The word was: " + wg.word);
+
             wg.playing = false;
         } else {
             send(chatId, "You're not in a Wordle game!");
@@ -450,6 +460,7 @@ public class WordleBotVS implements LongPollingSingleThreadUpdateConsumer {
                     SendMessage.builder()
                             .chatId(chatId)
                             .text(text)
+                            .parseMode("Markdown")
                             .build()
             );
             return m.getMessageId();
@@ -465,6 +476,7 @@ public class WordleBotVS implements LongPollingSingleThreadUpdateConsumer {
                     SendMessage.builder()
                             .chatId(chatId)
                             .text(text)
+                            .parseMode("Markdown")
                             .replyMarkup(kb)
                             .build()
             );
@@ -482,6 +494,7 @@ public class WordleBotVS implements LongPollingSingleThreadUpdateConsumer {
                             .chatId(chatId.toString())
                             .messageId(messageId)
                             .text(text)
+                            .parseMode("Markdown")
                             .replyMarkup(kb)
                             .build()
             );
@@ -533,5 +546,64 @@ public class WordleBotVS implements LongPollingSingleThreadUpdateConsumer {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    private void sendGif(Long chatId, String query, String caption, InlineKeyboardMarkup kb) {
+        try {
+            String encoded, q, c;
+            JsonNode gifUrl = null;
+            q = query;
+            c = caption;
+            do {
+                encoded = URLEncoder.encode(q, "UTF-8");
+                String url = "https://api.giphy.com/v1/gifs/search?api_key=" +
+                        GIPHY_API_KEY + "&q=" + encoded + "&limit=1&offset=" +
+                        random.nextInt(20);
+
+                HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
+                conn.setRequestMethod("GET");
+
+                BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+
+                String json = br.readLine();
+
+                ObjectMapper mapper = new ObjectMapper();
+                try {
+                    gifUrl = mapper.readTree(json)
+                            .get("data").get(0)
+                            .get("images").get("original").get("url");
+                } catch (Exception e) {
+                    q = "dancing";
+                    c = "\uD83E\uDD73\uD83E\uDD73\uD83E\uDD73";
+                }
+            } while (gifUrl == null);
+
+            InputFile Gif = new InputFile(gifUrl.asText());
+
+            telegramClient.execute(
+                    SendAnimation.builder()
+                            .chatId(chatId.toString())
+                            .animation(Gif)
+                            .caption(c)
+                            .replyMarkup(kb)
+                            .build()
+            );
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void DefinitionGif(Long chatId, String query, String caption) {
+        sendGif(chatId, query, caption, InlineKeyboardMarkup.builder()
+                .keyboard(Collections.singletonList(
+                        new InlineKeyboardRow(
+                                InlineKeyboardButton.builder()
+                                        .text("Do you want to know the definition?")
+                                        .callbackData("DEFINITION")
+                                        .build()
+                        )
+                ))
+                .build()
+        );
     }
 }

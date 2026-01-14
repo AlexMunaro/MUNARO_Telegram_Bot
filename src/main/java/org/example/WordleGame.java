@@ -55,6 +55,7 @@ public class WordleGame {
     public String next(String guess) {
 
         if (guess.equals(word)) {
+            playing = false;
             return "1";
         }
 
@@ -99,7 +100,8 @@ public class WordleGame {
         return AllString();
     }
 
-    String AllString(){
+
+    public String AllString(){
         String msg="";
         for(int i=0;i<maxTries;i++){
             msg+=answer[i];

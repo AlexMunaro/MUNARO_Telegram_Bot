@@ -44,6 +44,9 @@ Challenge yourself, track your stats, and compete with other players on the lead
 - **/give_up**  
   Give up your current Wordle game
 
+- **Definition**  
+  After the game ends you can get the definition of the current word, it only works with the english language due to API limitations
+
 ---
 
 ## 🚀 How to Play
