@@ -209,8 +209,6 @@ public class WordleBotVS implements LongPollingSingleThreadUpdateConsumer {
                         ))
                         .build()
                 );
-
-
             }
 
             if (wg.tries == wg.maxTries) {
