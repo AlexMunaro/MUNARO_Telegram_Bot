@@ -204,7 +204,7 @@ public class WordleBotVS implements LongPollingSingleThreadUpdateConsumer {
                 db.addWinByTag(pf.tag);
                 wi++;
             } else {
-                editMessage(chatId, statusMessageId, wg.getBlank() + "\nTries: 0 / " + wg.maxTries, InlineKeyboardMarkup.builder()
+                editMessage(chatId, statusMessageId, wg.getResult() + "\nTries: "+ wg.tries +" / " + wg.maxTries, InlineKeyboardMarkup.builder()
                         .keyboard(Collections.singletonList(
                                 new InlineKeyboardRow(
                                         InlineKeyboardButton.builder()
@@ -424,7 +424,7 @@ public class WordleBotVS implements LongPollingSingleThreadUpdateConsumer {
         ma++;
         send(chatId, "🎮 Wordle started!");
 
-        statusMessageId = send(chatId, wg.getBlank() + "\nTries: 0 / " + maxTries,
+        statusMessageId = send(chatId, wg.getResult() + "\nTries: 0 / " + maxTries,
                 InlineKeyboardMarkup.builder()
                         .keyboard(Collections.singletonList(
                                 new InlineKeyboardRow(

@@ -34,7 +34,7 @@ public class WordleGame {
         }
     }
 
-    public String getBlank(){
+    public String getResult(){
         String result = "";
         for(String s : answer){
             result += s;
@@ -53,12 +53,14 @@ public class WordleGame {
     }
 
     public String next(String guess) {
-
+        tries++;
         if (guess.equals(word)) {
             playing = false;
             return "1";
         }
-
+        if (tries > maxTries) {
+            playing = false;
+        }
 
         String[] result = new String[length];
         boolean[] used = new boolean[length];
@@ -92,22 +94,19 @@ public class WordleGame {
             }
         }
 
-        answer[tries] = AllString(result, length);
-        tries++;
-        if (tries > maxTries) {
-            playing = false;
-        }
-        return AllString();
+        answer[tries-1] = AllString(result, length);
+        return "0";
     }
 
-
-    public String AllString(){
+    /*
+    String AllString(){
         String msg="";
         for(int i=0;i<maxTries;i++){
             msg+=answer[i];
         }
         return msg;
     }
+    */
     String AllString(String[] arr, int l){
         String msg="";
         for(int i=0;i<l;i++){
