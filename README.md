@@ -3,6 +3,8 @@
 **WordleVS** is a competitive Telegram bot inspired by the classic **Wordle** game.  
 Challenge yourself, track your stats, and compete with other players on the leaderboard!
 
+Telegram bot Username: @wordlevs_bot
+
 ---
 
 ## 🎮 Available Commands
