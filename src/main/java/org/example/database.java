@@ -1,6 +1,9 @@
 package org.example;
 
 import java.sql.*;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 public class database {
     //connetti
@@ -35,26 +38,27 @@ public class database {
     private void createTableIfNotExists() throws SQLException {
         String sql = """
         CREATE TABLE IF NOT EXISTS career (
-            mdate DATE PRIMARY KEY NOT NULL,
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            mdate DATE NOT NULL,
             guesses TEXT NOT NULL,
             colors TEXT NOT NULL,
             word TEXT NOT NULL,
-            username1 TEXT NOT NULL,
-            username2 TEXT,
-            chatId TEXT NOT NULL UNIQUE,
-            FOREIGN KEY (chatId) REFERENCES player (chatId)
+            username TEXT NOT NULL,
+            tag INTEGER NOT NULL,
+            FOREIGN KEY (tag) REFERENCES players(tag)
+                ON UPDATE CASCADE
+                ON DELETE CASCADE
         );
     """;
         String sql2 = """
         CREATE TABLE IF NOT EXISTS players (
-            tag TEXT PRIMARY KEY NOT NULL,
-            username_wordle TEXT NOT NULL,
-            favlang TEXT NOT NULL,
-            matches INTEGER NOT NULL DEFAULT 0,
-            wins INTEGER NOT NULL DEFAULT 0,
-            telegram_username TEXT NOT NULL UNIQUE,
-            chatId TEXT NOT NULL UNIQUE
-        );
+              tag INTEGER PRIMARY KEY NOT NULL,
+              username_wordle TEXT NOT NULL,
+              favlang TEXT NOT NULL,
+              matches INTEGER NOT NULL DEFAULT 0,
+              wins INTEGER NOT NULL DEFAULT 0,
+              telegram_username TEXT NOT NULL UNIQUE
+          );
     """;
         try (Statement stmt = connection.createStatement()) {
             stmt.execute("PRAGMA foreign_keys = ON");
@@ -74,8 +78,8 @@ public class database {
     ) {
         String sql = """
                 INSERT INTO players
-                (tag, username_wordle, favlang, matches, wins, telegram_username, chatId)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                (tag, username_wordle, favlang, matches, wins, telegram_username)
+                VALUES (?, ?, ?, ?, ?, ?)
                 """;
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -85,7 +89,6 @@ public class database {
             ps.setInt(4, m);
             ps.setInt(5, w);
             ps.setString(6, telegramUsername);
-            ps.setLong(7, chatId);
             ps.executeUpdate();
             return true;
         } catch (SQLException e) {
@@ -204,9 +207,63 @@ public class database {
 
     }
 
-    public boolean updateCarrer(){
-        return false;
+    public boolean updateCarrer(String guesses, String colors, String word, String username, String tag) {
+        LocalDate date = LocalDate.now();
+
+
+        String sql = """
+        INSERT OR REPLACE INTO career (mdate, guesses, colors, word, username, tag)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """;
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, date.toString());  // "YYYY-MM-DD"
+            ps.setString(2, guesses);
+            ps.setString(3, colors);
+            ps.setString(4, word);
+            ps.setString(5, username);
+            ps.setString(6, tag);
+
+            return ps.executeUpdate() == 1;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
     }
+
+    public List<CareerEntry> getCareerByTag(String tag) {
+
+        List<CareerEntry> list = new ArrayList<>();
+
+        String sql = """
+        SELECT id, mdate, guesses, colors, word
+        FROM career
+        WHERE tag = ?
+        ORDER BY id DESC
+        LIMIT 10
+    """;
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, tag);
+
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                list.add(new CareerEntry(
+                        rs.getInt("id"),
+                        rs.getString("mdate"),
+                        rs.getString("guesses"),
+                        rs.getString("colors"),
+                        rs.getString("word")
+                ));
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return list;
+    }
+
 
     public boolean reloadDatabase() throws SQLException {
         String sql = """

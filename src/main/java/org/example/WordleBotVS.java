@@ -172,6 +172,9 @@ public class WordleBotVS implements LongPollingSingleThreadUpdateConsumer {
                 case "/leaderboard":
                     leaderboard(chatId);
                     break;
+                case "/career":
+                    career(chatId);
+                    break;
                 default:
                     sendGif(chatId, text, text + "!");
                     break;
@@ -193,8 +196,11 @@ public class WordleBotVS implements LongPollingSingleThreadUpdateConsumer {
 
             String s = wg.next(text.toLowerCase());
 
+            /*
             editMessage(chatId, statusMessageId,
                     "Tries: " + wg.tries + " / " + wg.maxTries, null);
+            */
+
 
             if (s.equals("1")) {
                 if (Objects.equals(pf.favlang, "en"))
@@ -202,6 +208,7 @@ public class WordleBotVS implements LongPollingSingleThreadUpdateConsumer {
                 else
                     sendGif(chatId, "victory", "You won in " + wg.tries + " tries!");
                 db.addWinByTag(pf.tag);
+                db.updateCarrer(wg.guesses,wg.getResult(),wg.word,pf.username,pf.tag);
                 wi++;
             } else {
                 editMessage(chatId, statusMessageId, wg.getResult() + "\nTries: "+ wg.tries +" / " + wg.maxTries, InlineKeyboardMarkup.builder()
@@ -222,6 +229,32 @@ public class WordleBotVS implements LongPollingSingleThreadUpdateConsumer {
             }
         }
     }
+
+    private void career(Long chatId){
+        List<CareerEntry> lista = db.getCareerByTag(pf.tag);
+        String msg;
+        for(CareerEntry l : lista){
+            msg = """
+                    📅 Date: %s
+                    🎯 Word: `%s`
+    
+                    🎨 Colors
+                    %s
+    
+                    🔤 Guesses
+                    %s
+                    """.formatted(
+                    l.date,
+                    l.word,
+                    l.colors,
+                    l.guesses
+            );
+            send(chatId,msg);
+            //System.out.println(msg);
+        }
+    }
+
+
 
     private void help(Long chatId) {
         send(chatId, "Here is the list of commands for the WordleVS bot");
@@ -447,7 +480,7 @@ public class WordleBotVS implements LongPollingSingleThreadUpdateConsumer {
                 DefinitionGif(chatId, "crying", "The word was: " + wg.word);
             else
                 sendGif(chatId, "crying", "The word was: " + wg.word);
-
+            db.updateCarrer(wg.ElaborateGuesses(),wg.getResult(),wg.word,pf.username,pf.tag);
             wg.playing = false;
         } else {
             send(chatId, "You're not in a Wordle game!");

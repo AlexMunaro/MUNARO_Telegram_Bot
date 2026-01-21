@@ -15,6 +15,20 @@ public class WordleGame {
     int length;
     public boolean playing;
     String[] answer;
+    public String guesses = "";
+
+    public String ElaborateGuesses() {
+        StringBuilder sb = new StringBuilder();
+
+        for (int i = 0; i < guesses.length(); i++) {
+            sb.append(guesses.charAt(i));
+            if ((i + 1) % length == 0) {
+                sb.append('\n');
+            }
+        }
+        System.out.println(sb.toString());
+        return sb.toString();
+    }
 
     public WordleGame(int maxTries, String language, int word_length) throws Exception {
         this.tries = 0;
@@ -25,25 +39,43 @@ public class WordleGame {
         playing = true;
         answer = new String[maxTries];
 
-        for(int i=0;i<this.maxTries;i++){
+
+        for (int i = 0; i < this.maxTries; i++) {
             answer[i] = "";
-            for(int j=0;j<length;j++){
-                answer[i] += "⬜ ";
+            for (int j = 0; j < length; j++) {
+                answer[i] += "w";//"⬜ ";
             }
-            answer[i] += "\n";
+            //answer[i] += "\n";
         }
     }
 
-    public String getResult(){
+    public String getResult() {
         String result = "";
-        for(String s : answer){
-            result += s;
+        for (int i = 0; i < this.maxTries; i++) {
+            for(char c : answer[i].toCharArray()) {
+                switch (c) {
+                    case 'w':
+                        result+="⬜ "; //bianco
+                        break;
+                    case 'b':
+                        result += "⬛ "; //nero
+                        break;
+                    case 'y':
+                        result += "\uD83D\uDFE8 "; //giallo
+                        break;
+                    case 'g':
+                        result += "\uD83D\uDFE9 "; //verde
+                        break;
+                }
+            }
+            result += "\n";
         }
+        System.out.println(AllString(answer,length));
         return result;
     }
 
     private String getRandomWord(int length) throws Exception {
-        String url = "https://random-word-api.herokuapp.com/word?length=" + length+"&lang="+language;
+        String url = "https://random-word-api.herokuapp.com/word?length=" + length + "&lang=" + language;
         HttpClient client = HttpClient.newHttpClient();
         HttpResponse<String> res = client.send(
                 HttpRequest.newBuilder().uri(URI.create(url)).GET().build(),
@@ -54,6 +86,7 @@ public class WordleGame {
 
     public String next(String guess) {
         tries++;
+        guesses+=guess;
         if (guess.equals(word)) {
             playing = false;
             return "1";
@@ -67,34 +100,34 @@ public class WordleGame {
 
 
         for (int i = 0; i < length; i++) {
-            result[i] = "⬛ ";
+            result[i] = "b";//"⬛ ";
+
         }
 
 
         for (int i = 0; i < length; i++) {
             if (guess.charAt(i) == word.charAt(i)) {
-                result[i] = "\uD83D\uDFE9 ";
+                result[i] = "g";//"\uD83D\uDFE9 "; //verde
                 used[i] = true;
             }
         }
 
 
         for (int i = 0; i < length; i++) {
-            if (result[i].equals("\uD83D\uDFE8 ")) continue;
+            if (result[i].equals("y")) continue;
 
             for (int j = 0; j < length; j++) {
                 if (!used[j] &&
                         guess.charAt(i) == word.charAt(j) &&
                         guess.charAt(i) != word.charAt(i)) {
 
-                    result[i] = "\uD83D\uDFE8 ";
+                    result[i] = "y";//"\uD83D\uDFE8 ";//giallo
                     used[j] = true;
                     break;
                 }
             }
         }
-
-        answer[tries-1] = AllString(result, length);
+        answer[tries - 1] = AllString(result, length);
         return "0";
     }
 
@@ -107,12 +140,12 @@ public class WordleGame {
         return msg;
     }
     */
-    String AllString(String[] arr, int l){
-        String msg="";
-        for(int i=0;i<l;i++){
-            msg+=arr[i];
+    String AllString(String[] arr, int l) {
+        String msg = "";
+        for (int i = 0; i < l; i++) {
+            msg += arr[i];
         }
-        msg +="\n";
+        //msg +="\n";
         return msg;
     }
 
