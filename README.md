@@ -26,6 +26,11 @@ Challenge yourself, track your stats, and compete with other players on the lead
 - **/delete_profile**  
   Delete your WordleVS profile permanently
 
+- **/career**  
+  View your previous games
+
+- **/clear_career**  
+  Clear your career history
 ---
 
 ### 🏆 Competition
