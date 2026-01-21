@@ -31,6 +31,7 @@ Challenge yourself, track your stats, and compete with other players on the lead
 
 - **/clear_career**  
   Clear your career history
+
 ---
 
 ### 🏆 Competition
@@ -50,7 +51,47 @@ Challenge yourself, track your stats, and compete with other players on the lead
   Give up your current Wordle game
 
 - **Definition**  
-  After the game ends you can get the definition of the current word, it only works with the english language due to API limitations
+  After the game ends, you can get the definition of the guessed word.  
+  This feature is available **only for English words** due to API limitations.
+
+---
+
+## 🌐 External APIs Used
+
+WordleVS relies on several public APIs to enhance gameplay and user experience:
+
+### 📚 Dictionary API
+**https://api.dictionaryapi.dev/api/v2/entries/en/{word}**
+
+Used to retrieve:
+- word definitions
+- synonyms
+- grammatical categories
+
+This API is used **after a game ends** to show the meaning of the guessed word.  
+⚠️ Only English words are supported.
+
+---
+
+### 🎞 Giphy API
+**https://api.giphy.com/v1/gifs/search**
+
+Used to display:
+- victory GIFs when a player wins
+- defeat or fun reaction GIFs when a game ends
+
+This makes the bot more interactive and engaging.
+
+---
+
+### 🔤 Random Word API
+**https://random-word-api.herokuapp.com/word?length={n}**
+
+Used to:
+- generate random words for Wordle games
+- support custom word lengths in `/play_variant`
+
+Ensures each game uses a new and unpredictable word.
 
 ---
 
