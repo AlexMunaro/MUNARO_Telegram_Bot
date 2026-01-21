@@ -26,7 +26,7 @@ public class WordleGame {
                 sb.append('\n');
             }
         }
-        System.out.println(sb.toString());
+        //System.out.println(sb.toString());
         return sb.toString();
     }
 
@@ -70,7 +70,7 @@ public class WordleGame {
             }
             result.append("\n");
         }
-        System.out.println(AllString(answer,length));
+        //System.out.println(AllString(answer,length));
         return result.toString();
     }
 

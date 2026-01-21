@@ -99,9 +99,9 @@ public class WordleBotVS implements LongPollingSingleThreadUpdateConsumer {
 
     private void delete_profile(Long chatId) throws Exception {
         if (pf == null) {
-            send(chatId, "Your profile doesn't exist");
+            send(chatId, "⚠️ Your profile doesn't exist");
         } else {
-            send(chatId, "Your profile got deleted successfully");
+            send(chatId, "✅ Your profile got deleted successfully");
             db.deletePlayerByTag(pf.tag);
             pf = null;
             ma = 0;
@@ -112,7 +112,7 @@ public class WordleBotVS implements LongPollingSingleThreadUpdateConsumer {
     private void edit_profile(Long chatId, String User) throws Exception {
         //pf=db.getPlayerByTelegramUsername("Devopagareilmutuo");
         if (pf == null) {
-            send(chatId, "Your profile doesn't exist");
+            send(chatId, "⚠️ Your profile doesn't exist");
         } else {
             db.deletePlayerByTag(pf.tag);
             create_profile(chatId);
@@ -141,24 +141,24 @@ public class WordleBotVS implements LongPollingSingleThreadUpdateConsumer {
                     break;
                 case "/profile":
                     if (pf != null) {
-                        System.out.println(pf.username);
+                        //System.out.println(pf.username);
                         profile(msg, chatId, userId);
                     } else {
-                        send(chatId, "You don't have a profile!");
+                        send(chatId, "⚠️ You don't have a profile!");
                     }
                     break;
                 case "/play":
                     if (pf != null)
                         startGame(chatId, 6, pf.favlang, 5);
                     else
-                        send(chatId, "You can't play without a profile!");
+                        send(chatId, "⚠️ You can't play without a profile!");
                     break;
 
                 case "/play_variant":
                     if (pf != null)
                         play_variant(chatId, msg);
                     else
-                        send(chatId, "You can't play without a profile!");
+                        send(chatId, "⚠️ You can't play without a profile!");
                     break;
                 case "/create_profile":
                     create_profile(chatId);
@@ -193,7 +193,7 @@ public class WordleBotVS implements LongPollingSingleThreadUpdateConsumer {
             }
 
             if (text.length() != wg.length) {
-                send(chatId, "The word must be exactly " + wg.length + " characters long");
+                send(chatId, "⚠️ The word must be exactly " + wg.length + " characters long");
                 return;
             }
 
@@ -262,7 +262,7 @@ public class WordleBotVS implements LongPollingSingleThreadUpdateConsumer {
                 send(chatId, msg);
             }
         } else {
-            send(chatId, "Your career is empty!");
+            send(chatId, "⚠️ Your career is empty!");
         }
         //System.out.println(msg);
 
@@ -281,6 +281,8 @@ public class WordleBotVS implements LongPollingSingleThreadUpdateConsumer {
                 /play - Play traditional Wordle
                 /play_variant - Play Wordle with custom lengths and tries
                 /give_up - Give up your current Wordle game
+                /career - View your previous games
+                /career_clear - Clear your career history
                 """);
     }
 
@@ -385,8 +387,8 @@ public class WordleBotVS implements LongPollingSingleThreadUpdateConsumer {
 
         send(chatId, "✅ Profile created successfully!");
         pf = new WordleProfile(tag, usernameWordle, lang, telegramUsername, 0, 0);
-        System.out.println(db.getPlayerByTag(tag));
-        System.out.println(db.getPlayerByTelegramUsername(telegramUsername));
+        //System.out.println(db.getPlayerByTag(tag));
+        //System.out.println(db.getPlayerByTelegramUsername(telegramUsername));
     }
 
 
