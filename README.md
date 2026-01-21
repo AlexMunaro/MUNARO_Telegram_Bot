@@ -1,9 +1,34 @@
 # 🤖 WordleVS — Telegram Bot
 
 **WordleVS** is a competitive Telegram bot inspired by the classic **Wordle** game.  
-Challenge yourself, track your stats, and compete with other players on the leaderboard!
+It allows users to play Wordle directly on Telegram, track their statistics, store match history, and compete with other players on a global leaderboard.
 
-Telegram bot Username: @wordlevs_bot
+📌 **Telegram Bot Username:** `@wordlevs_bot`
+
+---
+
+## 🛠 Technologies & Tools
+
+- **Language:** Java (JDK 21)
+- **Build Tool:** Maven
+- **Telegram Library:** TelegramBots Java Library
+- **Database:** SQLite
+- **External APIs:**
+    - DictionaryAPI
+    - Giphy API
+    - Random Word API
+
+---
+
+## 🎯 Project Features
+
+- Persistent user profiles
+- Match history (career) saved in database
+- Player statistics (wins, matches, leaderboard)
+- Support for classic and custom Wordle games
+- Integration with multiple public APIs
+- API key management via external configuration
+- SQLite relational database with foreign keys and cascade rules
 
 ---
 
@@ -11,7 +36,7 @@ Telegram bot Username: @wordlevs_bot
 
 ### 📖 General
 - **/help**  
-  Get the full list of WordleVS commands
+  Show the list of available commands
 
 ---
 
@@ -20,16 +45,16 @@ Telegram bot Username: @wordlevs_bot
   View your WordleVS profile information
 
 - **/create_profile**  
-  Create your WordleVS profile
+  Create a new WordleVS profile
 
 - **/edit_profile**  
-  Edit your WordleVS profile
+  Edit your profile settings
 
 - **/delete_profile**  
-  Delete your WordleVS profile permanently
+  Delete your profile and all related data
 
 - **/career**  
-  View your previous games
+  View your last 10 played games
 
 - **/clear_career**  
   Clear your career history
@@ -38,80 +63,118 @@ Telegram bot Username: @wordlevs_bot
 
 ### 🏆 Competition
 - **/leaderboard**  
-  View the top 10 WordleVS players
+  Show the top 10 WordleVS players
 
 ---
 
 ### 🎲 Gameplay
 - **/play**  
-  Play the classic Wordle game
+  Play classic Wordle
 
 - **/play_variant**  
   Play Wordle with custom word length and number of tries
 
 - **/give_up**  
-  Give up your current Wordle game
+  Give up the current game
 
 - **Definition**  
-  After the game ends, you can get the definition of the guessed word.  
-  This feature is available **only for English words** due to API limitations.
+  After the game ends, you can request the definition of the guessed word  
+  (English only, due to API limitations)
 
 ---
 
 ## 🌐 External APIs Used
 
-WordleVS relies on several public APIs to enhance gameplay and user experience:
-
 ### 📚 Dictionary API
-**https://api.dictionaryapi.dev/api/v2/entries/en/{word}**
+🔗 https://dictionaryapi.dev/
 
 Used to retrieve:
-- word definitions
-- synonyms
-- grammatical categories
+- Definitions
+- Synonyms
+- Part of speech
 
-This API is used **after a game ends** to show the meaning of the guessed word.  
-⚠️ Only English words are supported.
+📌 Used **after a game ends** to show the meaning of the guessed word.  
+⚠️ Supports **English language only**.
 
 ---
 
 ### 🎞 Giphy API
-**https://api.giphy.com/v1/gifs/search**
+🔗 https://developers.giphy.com/
 
-Used to display:
-- victory GIFs when a player wins
-- defeat or fun reaction GIFs when a game ends
+Used to:
+- Display victory GIFs when a player wins
+- Show reaction GIFs when a game ends
 
-This makes the bot more interactive and engaging.
+📌 Requires an **API key**.
 
 ---
 
 ### 🔤 Random Word API
-**https://random-word-api.herokuapp.com/word?length={n}**
+🔗 https://random-word-api.herokuapp.com/
 
 Used to:
-- generate random words for Wordle games
-- support custom word lengths in `/play_variant`
-
-Ensures each game uses a new and unpredictable word.
+- Generate random words for Wordle games
+- Support variable word lengths in `/play_variant`
 
 ---
 
-## 🚀 How to Play
-1. Start a new game with `/play` or `/play_variant`
-2. Guess the hidden word
-3. Interpret the results:
-    - 🟩 Letter is correct and in the right position
-    - 🟨 Letter is correct but in the wrong position
-    - ⬛ Letter is not in the word
-4. Win the game or try again… but choose wisely!
+## 🗄 Database Design (SQLite)
+
+The project uses a **relational SQLite database** with persistent storage.
+
+### 📌 Tables
+
+#### `players`
+| Field | Type | Description |
+|------|------|-------------|
+| tag | INTEGER (PK) | Unique player identifier |
+| username_wordle | TEXT | Wordle username |
+| favlang | TEXT | Preferred language |
+| matches | INTEGER | Total matches played |
+| wins | INTEGER | Total wins |
+| telegram_username | TEXT | Telegram username |
+
+#### `career`
+| Field | Type | Description |
+|------|------|-------------|
+| id | INTEGER (PK AUTOINCREMENT) | Match ID |
+| mdate | DATE | Match date |
+| guesses | TEXT | User guesses |
+| colors | TEXT | Guess results |
+| word | TEXT | Secret word |
+| username | TEXT | Username |
+| tag | INTEGER (FK) | Player reference |
+
+🔗 `career.tag → players.tag`  
+✔ `ON DELETE CASCADE`  
+✔ `ON UPDATE CASCADE`
 
 ---
 
-## 👨‍💻 Author
-Created by **Alex Munaro**  
-🎓 *ITIS A. Rossi*
+## 📊 Statistics & Queries Implemented
+
+- Total matches per player
+- Total wins per player
+- Win rate calculation
+- Global leaderboard (Top 10 players)
+- Last 10 matches per user (career)
 
 ---
 
-Enjoy playing **WordleVS** and climb the leaderboard! 🏆
+## 🔐 API Key & Configuration
+
+⚠️ **API keys are NOT committed to the repository**
+
+### Configuration file
+Create a file called:
+config.properties
+
+Example:
+```properties
+BOT_TOKEN=insert_your_telegram_bot_token
+GIPHY_API_KEY=insert_your_giphy_api_key
+```
+
+📌 The file is listed in .gitignore
+A template is provided:
+config.properties.example
