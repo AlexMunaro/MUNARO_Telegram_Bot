@@ -175,6 +175,9 @@ public class WordleBotVS implements LongPollingSingleThreadUpdateConsumer {
                 case "/career":
                     career(chatId);
                     break;
+                case "/clear_career":
+                    clear_carrer(chatId);
+                    break;
                 default:
                     sendGif(chatId, text, text + "!");
                     break;
@@ -203,15 +206,16 @@ public class WordleBotVS implements LongPollingSingleThreadUpdateConsumer {
 
 
             if (s.equals("1")) {
+                editMessage(chatId, statusMessageId, wg.getResult() + "\nTries: " + wg.tries + " / " + wg.maxTries, InlineKeyboardMarkup.builder().build());
                 if (Objects.equals(pf.favlang, "en"))
                     DefinitionGif(chatId, "victory", "You won in " + wg.tries + " tries!");
                 else
                     sendGif(chatId, "victory", "You won in " + wg.tries + " tries!");
                 db.addWinByTag(pf.tag);
-                db.updateCarrer(wg.guesses,wg.getResult(),wg.word,pf.username,pf.tag);
+                db.updateCarrer(wg.guesses, wg.getResult(), wg.word, pf.username, pf.tag);
                 wi++;
             } else {
-                editMessage(chatId, statusMessageId, wg.getResult() + "\nTries: "+ wg.tries +" / " + wg.maxTries, InlineKeyboardMarkup.builder()
+                editMessage(chatId, statusMessageId, wg.getResult() + "\nTries: " + wg.tries + " / " + wg.maxTries, InlineKeyboardMarkup.builder()
                         .keyboard(Collections.singletonList(
                                 new InlineKeyboardRow(
                                         InlineKeyboardButton.builder()
@@ -230,30 +234,39 @@ public class WordleBotVS implements LongPollingSingleThreadUpdateConsumer {
         }
     }
 
-    private void career(Long chatId){
-        List<CareerEntry> lista = db.getCareerByTag(pf.tag);
-        String msg;
-        for(CareerEntry l : lista){
-            msg = """
-                    📅 Date: %s
-                    🎯 Word: `%s`
-    
-                    🎨 Colors
-                    %s
-    
-                    🔤 Guesses
-                    %s
-                    """.formatted(
-                    l.date,
-                    l.word,
-                    l.colors,
-                    l.guesses
-            );
-            send(chatId,msg);
-            //System.out.println(msg);
-        }
+    private void clear_carrer(Long chatId) {
+        db.clearCareerByTag(pf.tag);
+        send(chatId, "✅ Career deleted successfully");
     }
 
+    private void career(Long chatId) {
+        List<CareerEntry> lista = db.getCareerByTag(pf.tag);
+        if (lista.size() != 0) {
+            String msg;
+            for (CareerEntry l : lista) {
+                msg = """
+                        📅 Date: %s
+                        🎯 Word: `%s`
+                        
+                        🎨 Colors
+                        %s
+                        
+                        🔤 Guesses
+                        %s
+                        """.formatted(
+                        l.date,
+                        l.word,
+                        l.colors,
+                        l.guesses
+                );
+                send(chatId, msg);
+            }
+        } else {
+            send(chatId, "Your career is empty!");
+        }
+        //System.out.println(msg);
+
+    }
 
 
     private void help(Long chatId) {
@@ -480,7 +493,8 @@ public class WordleBotVS implements LongPollingSingleThreadUpdateConsumer {
                 DefinitionGif(chatId, "crying", "The word was: " + wg.word);
             else
                 sendGif(chatId, "crying", "The word was: " + wg.word);
-            db.updateCarrer(wg.ElaborateGuesses(),wg.getResult(),wg.word,pf.username,pf.tag);
+            editMessage(chatId, statusMessageId, wg.getResult() + "\nTries: " + wg.tries + " / " + wg.maxTries, InlineKeyboardMarkup.builder().build());
+            db.updateCarrer(wg.ElaborateGuesses(), wg.getResult(), wg.word, pf.username, pf.tag);
             wg.playing = false;
         } else {
             send(chatId, "You're not in a Wordle game!");

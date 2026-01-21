@@ -231,6 +231,20 @@ public class database {
         }
     }
 
+    public boolean clearCareerByTag(String tag) {
+
+        String sql = "DELETE FROM career WHERE tag = ?";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, tag);
+            return ps.executeUpdate() >= 0; // true anche se non c'erano record
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+
     public List<CareerEntry> getCareerByTag(String tag) {
 
         List<CareerEntry> list = new ArrayList<>();

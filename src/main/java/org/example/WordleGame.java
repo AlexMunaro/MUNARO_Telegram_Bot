@@ -50,28 +50,28 @@ public class WordleGame {
     }
 
     public String getResult() {
-        String result = "";
+        StringBuilder result = new StringBuilder();
         for (int i = 0; i < this.maxTries; i++) {
             for(char c : answer[i].toCharArray()) {
                 switch (c) {
                     case 'w':
-                        result+="⬜ "; //bianco
+                        result.append("⬜ "); //bianco
                         break;
                     case 'b':
-                        result += "⬛ "; //nero
+                        result.append("⬛ "); //nero
                         break;
                     case 'y':
-                        result += "\uD83D\uDFE8 "; //giallo
+                        result.append("\uD83D\uDFE8 "); //giallo
                         break;
                     case 'g':
-                        result += "\uD83D\uDFE9 "; //verde
+                        result.append("\uD83D\uDFE9 "); //verde
                         break;
                 }
             }
-            result += "\n";
+            result.append("\n");
         }
         System.out.println(AllString(answer,length));
-        return result;
+        return result.toString();
     }
 
     private String getRandomWord(int length) throws Exception {
@@ -87,13 +87,6 @@ public class WordleGame {
     public String next(String guess) {
         tries++;
         guesses+=guess;
-        if (guess.equals(word)) {
-            playing = false;
-            return "1";
-        }
-        if (tries > maxTries) {
-            playing = false;
-        }
 
         String[] result = new String[length];
         boolean[] used = new boolean[length];
@@ -127,7 +120,18 @@ public class WordleGame {
                 }
             }
         }
+
         answer[tries - 1] = AllString(result, length);
+
+        if (guess.equals(word)) {
+            playing = false;
+            return "1";
+        }
+        if (tries > maxTries) {
+            playing = false;
+        }
+
+
         return "0";
     }
 
